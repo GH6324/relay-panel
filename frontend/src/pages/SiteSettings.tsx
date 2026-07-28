@@ -1,10 +1,11 @@
-import { Card, Form, Input, Button, message, Spin, Result, Typography } from 'antd';
+import { Card, Form, Input, Button, message, Spin, Result, Typography, Select, Alert } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import api from '../api/client';
 import type { ApiEnvelope, SiteConfig } from '../api/types';
 import { useI18n } from '../i18n/context';
 import { invalidateSite } from '../hooks/useSite';
 import { invalidateSiteNotice } from '../hooks/useSiteNotice';
+import { renderMarkdown } from '../utils/markdown';
 
 const { Text } = Typography;
 
@@ -15,6 +16,12 @@ const MAX_NAME = 64;
 const MAX_SUBTITLE = 128;
 const MAX_ANNOUNCEMENT = 4000;
 const MAX_CONTACT = 256;
+
+// The severities the backend accepts. Kept as a const tuple so the preview can
+// hand antd's Alert a properly narrowed type — Form.useWatch only knows the
+// field is a string.
+const ALERT_TYPES = ['info', 'success', 'warning', 'error'] as const;
+type AlertType = (typeof ALERT_TYPES)[number];
 
 /**
  * v1.3.0: site identity — name, subtitle, announcement, support contact.
@@ -30,6 +37,14 @@ export default function SiteSettings() {
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
   const [initial, setInitial] = useState<SiteConfig | null>(null);
+  // Watched so the preview below the textarea updates as it is typed. The
+  // markdown subset is small but not obvious, and a preview is cheaper than
+  // making the operator save and navigate to see what they wrote.
+  const announcement = Form.useWatch('announcement', form);
+  const announcementType = Form.useWatch('announcement_type', form);
+  const previewType: AlertType = (ALERT_TYPES as readonly string[]).includes(announcementType)
+    ? (announcementType as AlertType)
+    : 'info';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,6 +128,21 @@ export default function SiteSettings() {
           <Input showCount maxLength={MAX_SUBTITLE} />
         </Form.Item>
         <Form.Item
+          name="announcement_type"
+          label={t('siteAnnouncementType')}
+          extra={t('siteAnnouncementTypeHint')}
+        >
+          <Select
+            style={{ maxWidth: 220 }}
+            options={[
+              { value: 'info', label: t('announcementTypeInfo') },
+              { value: 'success', label: t('announcementTypeSuccess') },
+              { value: 'warning', label: t('announcementTypeWarning') },
+              { value: 'error', label: t('announcementTypeError') },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item
           name="announcement"
           label={t('siteAnnouncement')}
           extra={t('siteAnnouncementHint')}
@@ -120,6 +150,18 @@ export default function SiteSettings() {
         >
           <Input.TextArea rows={6} showCount maxLength={MAX_ANNOUNCEMENT} />
         </Form.Item>
+        {/* Preview exactly as users will see it — same Alert, same renderer. */}
+        {announcement?.trim() ? (
+          <Form.Item label={t('siteAnnouncementPreview')}>
+            <Alert
+              type={previewType}
+              showIcon
+              description={
+                <div style={{ whiteSpace: 'pre-wrap' }}>{renderMarkdown(announcement)}</div>
+              }
+            />
+          </Form.Item>
+        ) : null}
         <Form.Item
           name="contact"
           label={t('siteContact')}
