@@ -103,7 +103,19 @@ boot; nothing to reconfigure.
 - Announcement severities render as words rather than the wire values
   `info` / `success` / `warning` / `error`.
 
+- **The account page's announcement banner is a summary, not the full notice.**
+  Carrying the whole text made it 299px — a third of the viewport — for a
+  routine maintenance message, pushing the account details the page exists for
+  down the screen. It now shows the title, two clamped lines of plain text and
+  a link through to the archive; a 4000-character notice takes exactly as much
+  room as a short one (measured: 119px either way, down from 273-299px).
 
+  The excerpt is stripped of markup rather than rendered: a two-line cut with
+  half a bold run and a dangling list dash reads worse than the same words
+  plain, and the formatting is intact one click away.
+
+  The header bell is labelled 公告 rather than a bare icon. Every other control
+  in that header is icon + text, so an icon alone read as decoration.
 
 - **The admin menu is grouped into two submenus.** It had reached twelve
   top-level entries. 用户与计费 holds 用户管理 / 套餐管理 / 卡密管理; 系统设置
