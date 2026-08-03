@@ -10,7 +10,67 @@ independent `v*` / `node-v*` tracks since this release).
 
 ## [Unreleased]
 
+### Changed
+
+- **An offline node stays listed for 24 hours instead of 2 minutes.** The status
+  row was deleted 120 seconds after a node went quiet, so combined with the 30s
+  offline window a node was painted offline and then vanished a minute and a
+  half later. The panel could not answer "which of my nodes is down right now",
+  because during an outage the row worth looking at is exactly the one that had
+  been removed.
+
+  Past a day the row is still swept, so a decommissioned node disappears on its
+  own; an admin who does not want to wait can now remove it by hand.
+
+- **Text contrast raised across the panel.** `--rp-text-tertiary` sat at 3.02:1
+  against white, below the 4.5:1 WCAG AA asks for body text, and it carried real
+  content on the node table — CPU, memory and disk percentages, transfer rates.
+  antd's own text tokens had never been set either, so table bodies fell back to
+  `rgba(0,0,0,0.45)` at 2.85:1. Both now meet AA.
+
+- **Offline nodes are greyed.** Every figure on an offline row — CPU, speed,
+  uptime, connections — is the node's last report rather than a live reading,
+  and rendered like an online row a wall of healthy-looking numbers said the
+  opposite of what was true. The threshold colouring on its usage bars is
+  neutralised for the same reason. Grey, not faded: those readings are what you
+  look at to work out why the node went, so the row stays above the 4.5:1
+  contrast floor. Applies to the mobile card list too.
+
+- **A monitor-only group stops asking for forwarding settings.** It reports node
+  status to admins and nothing else — no rule is bound to it, and
+  `list_shared_groups` filters to `group_type='in'`, so it never reaches a
+  regular user's lines or node status either. Connect host, port range, rate and
+  hidden were still required on the form and shown in the table, which read as
+  configuration when nothing consumed them. They are now dropped from the form
+  and shown as `-` in the table. Converting an existing group to monitor leaves
+  the stored values untouched, so switching back restores it intact.
+
+- **A group's type reads as words, and the listener type is renamed.** The type
+  column rendered the raw wire value, so an otherwise Chinese page showed "IN"
+  and "MONITOR".
+
+  It now shows the same label the form's picker offers — and that label changed:
+  what was 入口（监听节点） is now 出口（监听节点）, because listening is a
+  capability of that machine rather than a type of its own. Every 入口分组 in the
+  UI follows. The legacy `out` type had to be renamed too: it was already called
+  出口, and leaving it would have made one word mean two different things on the
+  same page. It is now 落地（旧版，已废弃） — still labelled, because a database
+  from an older version can still contain one, even though the type has not been
+  offered when creating a group for several releases.
+
+  English is named by ROLE rather than direction (Listener node / Listener
+  Group), so the two languages do not assert opposite directions for one field.
+
+  **Display only** — the stored values stay `in` / `out` / `monitor`. Renaming
+  them would mean a migration, a protocol change and both repository
+  implementations, to fix what was a wording problem.
+
 ### Added
+
+- **Remove an offline node from the list.** Offered only on offline rows —
+  deleting an online node's record achieves nothing, because its next report
+  recreates it within seconds. The confirmation says plainly that this drops a
+  record rather than uninstalling anything. The deletion is audited.
 
 - **`relay-panel reset-admin-password [USER]`.** Recovering a lost admin
   password meant editing the database by hand: pasting a bcrypt placeholder
