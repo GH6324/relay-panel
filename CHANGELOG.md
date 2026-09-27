@@ -8,6 +8,73 @@ independent `v*` / `node-v*` tracks since this release).
 
 ---
 
+## [1.2.11] - 2026-09-27
+
+Ships alongside `node-v1.2.5`; neither requires the other, and the config
+protocol is unchanged at version 4. No database migration.
+
+Upgrading: this release installs the one-click updater described below, so
+**update this time the manual way** (`git pull --quiet && ./deploy.sh`); from
+the next release on, "Update now" on the dashboard does it. Live node rates
+need `node-v1.2.5`; older nodes keep showing their 10 s figure.
+
+### Added
+
+- **One-click panel update.** "Update now" on the dashboard now updates the
+  panel instead of linking to the manual steps — like the nodes' one-click
+  upgrade, for installations made with the install script (under
+  `/opt/relay-panel`, on a systemd host).
+
+  The panel cannot do this itself the way a node does: it runs in a container,
+  and replacing a container's own image from inside requires mounting the
+  Docker socket, which would hand the panel — a public web app with
+  self-registration — root on the host. So the panel only asks. It drops a
+  request file in `./run`, a directory shared with the host; a systemd path
+  unit installed by `deploy.sh` notices it and runs `scripts/panel-updater.sh`
+  as root, which does what an operator would: `git pull --ff-only` and
+  `./deploy.sh`. A compromised panel can at most request an update to the
+  official latest release — the host ignores the request's contents and pulls
+  the official repository.
+
+  With SQLite the panel is stopped and its database copied to
+  `./backups/` first (the newest five are kept), because the new version may
+  migrate the schema. PostgreSQL is not backed up automatically. The panel is
+  unreachable for about half a minute; node forwarding is not affected. The
+  outcome — including a failed `git pull`, a version pinned in `.env`, or a
+  failed deploy (after which the panel is started again) — is shown on the
+  dashboard with the end of the updater's log, and the full log is in
+  `/var/log/relaypanel-updater.log`. The request is recorded in the audit log.
+
+  Existing installations need one manual update (`git pull && ./deploy.sh`) to
+  install the updater; until then the button keeps pointing at the manual
+  steps and says so.
+
+- **Node rates on the node-status page are now near real time.** The upload /
+  download rate used to be a ~10 s average that changed only as often as the
+  node's whole status report ran. A node running `node-v1.2.5` or later now
+  pushes its NIC rate over the existing WebSocket every 2 s, the panel keeps it
+  in memory (never in the database), and the page polls a small new endpoint,
+  `GET /api/v1/nodes/live-rates`, every 2 s while it is open — pausing when the
+  tab is in the background. CPU, memory, disk and cumulative traffic keep their
+  existing cadence. The detail drawer now updates while it is open too; it used
+  to show the figures from the moment it was clicked.
+
+  The rate is machine-wide, the same measure as before, so it includes traffic
+  that never passes through relay-node — iptables forwarding, other services.
+  Older nodes keep showing the 10 s figure.
+
+  Regular users see live rates only for the lines the page already shows them:
+  the endpoint and the node summary now share one visibility rule (authorized
+  and not hidden) instead of two copies of it.
+
+### Changed
+
+- **A GitHub link in the header**, at its right end, pointing to the
+  repository. It is shown to every user, as the login page already links the
+  same repository to everyone.
+- **System settings are reordered**: site settings first, then basic settings,
+  notifications, announcements and the audit log.
+
 ## [1.2.10] - 2026-09-24
 
 Panel only, and a license release rather than a feature one: no code behaviour

@@ -14,6 +14,7 @@ pub mod groups;
 pub mod middleware;
 pub mod node;
 pub mod notify;
+pub mod panel_update;
 pub mod redeem;
 pub mod restart;
 pub mod security_headers;
@@ -197,6 +198,13 @@ pub fn routes() -> Router<AppState> {
             "/nodes/shared",
             axum::routing::get(groups::list_shared_node_summary),
         )
+        // v1.2.11: each node's latest pushed NIC rate, polled by the
+        // node-status page while it is open. Same visibility rule as
+        // /nodes/shared for regular users; admins see every node.
+        .route(
+            "/nodes/live-rates",
+            axum::routing::get(groups::list_live_rates),
+        )
         // v0.4.0: tunnel profile catalog. v0.4.10: the GET list is readable by
         // any authenticated user (admins see all profiles; regular users see
         // only the builtin catalog they can bind to). WRITES stay admin-only on
@@ -302,6 +310,13 @@ pub fn routes() -> Router<AppState> {
         )
         // System
         .route("/system/version", axum::routing::get(system::get_version))
+        // v1.2.11: one-click panel update. The panel only drops a request; a
+        // systemd unit on the host does the update (see panel_update.rs).
+        .route(
+            "/system/panel-update",
+            axum::routing::get(panel_update::get_panel_update)
+                .post(panel_update::start_panel_update),
+        )
         // Public, unauthenticated health probe (status + version only). Used by
         // deploy.sh and external monitors; NOT behind AdminOnly.
         .route("/health", axum::routing::get(system::health))
